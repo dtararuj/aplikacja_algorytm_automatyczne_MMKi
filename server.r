@@ -7,6 +7,7 @@ library(writexl)
 
 
 
+
 shinyServer(function(input, output,session){
 
 nie_przesuwac_do_nich_lista<-reactive({paste0(c(input$nie_przesuwac_do_nich))})

@@ -4,6 +4,7 @@ library(tidyverse)
 library(readxl)
 library(writexl)
 
+
 lista_sklepow <- read_excel(file.path("Z:/PRODUKT/NOWE SKLEPY/aplikacja","lista sklepow.xlsx")) %>%  select(sklepy=4) %>% unique() %>% na.omit() %>%  mutate(sklepy=paste("SKLEP", sklepy)) %>% pull()
 
 
