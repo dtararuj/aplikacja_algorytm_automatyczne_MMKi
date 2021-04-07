@@ -34,3 +34,5 @@ shinyUI(fluidPage(
   ),
   mainPanel(tableOutput("podsumowanie_2")
 ))))
+
+
