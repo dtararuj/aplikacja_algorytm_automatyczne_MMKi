@@ -126,7 +126,7 @@ hierarchia_1<-reactive({
   nazwa_folderu1<-nazwa_folderu()
 hierarchia<-read_xlsx(file.path(nazwa_folderu1,"HierarchiaProd.xlsx"), sheet = "listaModeli")
 
-#trochÄ™ je oczyszczamy
+#troche je oczyszczamy
 hierarchia %>% select(KodProduktu=2,KATEGORIA=4,11,12) %>% mutate(GRUPA=toupper(GRUPA))
 })
 
@@ -150,7 +150,7 @@ same_jeansy<-raport_zatowarowanie_1A %>% filter(GRUPA=="JEANS")
 
 remanenty_rob_1<-baza1_1A %>% left_join(bez_jeansów, by=c("Magazyn","DEPARTAMENT","KATEGORIA")) %>% select(1:6, GRUPA=7, 10 ) %>% left_join(same_jeansy, by=c("Magazyn","DEPARTAMENT","KATEGORIA", "GRUPA"))
 
-#musimy poprawiÄ‡, bo nam siÄ™ Ĺşle targety sumujÄ….
+#musimy poprawic, bo nam sie zle targety sumuja
 wartosci<-ifelse(remanenty_rob_1$GRUPA=="JEANS",remanenty_rob_1$WARTOŚC.y,remanenty_rob_1$WARTOŚC.x)
 
 remanenty_rob_1 %>%  mutate(WARTOŚC=wartosci)
@@ -218,6 +218,8 @@ wykluczone<-reactive({
 zest.cz.2_A<-zest.cz.2()
 sklep_odtowarowywany_zmienna_1A<-sklep_odtowarowywany_zmienna()
 nie_przesuwac_do_nich_lista_1A<-nie_przesuwac_do_nich_lista()
+
+
 zest.cz.2_A%>%  filter(!Magazyn %in% c(sklep_odtowarowywany_zmienna_1A,nie_przesuwac_do_nich_lista_1A))
 })
 
@@ -302,17 +304,135 @@ MMki_scalone<- eventReactive(input$update,{
   #output$podsumowanie_2 <-renderTable({
    # MMki_scalone_1A<-MMki_scalone()
     #MMki_scalone_1A %>%  tail()})
-  
-output$upload <- downloadHandler(filename = "lista_MMek.csv", content = function(file) {
-  write.csv(MMki_scalone(), file, row.names = TRUE)})
+
+## Tworzenie pliku do pobrania
+#to wykorzystywalem wczesniej
+#output$upload <- downloadHandler(filename = "lista_MMek.csv", content = function(file) {
+#  write.csv(MMki_scalone(), file, row.names = TRUE)})
 
 
-#7a podsumowanie
+#7a podsumowanie 
 
-
-output$podsumowanie_2 <-renderTable({
+output$podsumowanie <-renderTable({
     MMki_scalone_1A<-MMki_scalone()
     MMki_scalone_1A %>% group_by(dokad) %>%  summarise(ilosc_szt=as.integer(sum(ilosc))) %>% arrange(desc(ilosc_szt)) %>%  mutate("lp"=row_number()) %>%  select(3,1,2)})
   
+
+
+############################################## dodatkowe rozwiazanie
+
+#8 gdy chcemy wymusic ilosc sklepow, do ktorych trafia MMki
+
+do_ilu_wyslac <- reactive({input$ilosc_MMek})
+gdzie_tylko_przesuwamy <- reactive({
+  MMki_scalone_1A<-MMki_scalone()
+  do_ilu_wyslac<- do_ilu_wyslac()
+  
+  
+  lista<-MMki_scalone_1A %>% group_by(dokad) %>%  summarise(ilosc_szt=as.integer(sum(ilosc))) %>% arrange(desc(ilosc_szt)) %>% select(1) %>% pull()
+  pelna_lista_bez_NA<-lista[1:do_ilu_wyslac]
+  pelna_lista_bez_NA[!is.na(pelna_lista_bez_NA)]
 })
+
+
+wykluczone1<-reactive({
+  #usuwam z listy sklepy, ktorych niechce dotowarowywac
+  zest.cz.2_A<-zest.cz.2()
+  sklep_odtowarowywany_zmienna_1A<-sklep_odtowarowywany_zmienna()
+  nie_przesuwac_do_nich_lista_1A<-nie_przesuwac_do_nich_lista()
+  gdzie_tylko_przesuwamy_1A<-gdzie_tylko_przesuwamy()
+  
+  zest.cz.2_A%>%  filter(!Magazyn %in% c(sklep_odtowarowywany_zmienna_1A,nie_przesuwac_do_nich_lista_1A) & Magazyn %in%  gdzie_tylko_przesuwamy_1A)
+})
+
+posortowane_1_1<- reactive({
+  wykluczone_1A<-wykluczone1()
+  switch(input$sposob_sortowania,
+         "a"=wykluczone_1A %>% arrange(KodProduktu,Rozmiar,ilosc,desc(SlsU_R),desc(SlsU),ile_szt_all,WARTOŚC,desc(SUMA))%>% select(-ile_szt_all),
+         "b"=wykluczone_1A %>% arrange(KodProduktu,Rozmiar,desc(SlsU),ilosc,desc(SlsU_R),ile_szt_all,WARTOŚC,desc(SUMA))%>% select(-ile_szt_all), 
+         "c"=wykluczone_1A %>% arrange(KodProduktu,Rozmiar,WARTOŚC,ilosc,desc(SlsU_R),desc(SlsU),ile_szt_all,desc(SUMA))%>% select(-ile_szt_all), 
+         "d"=wykluczone_1A %>% arrange(KodProduktu,Rozmiar,ile_szt_all,ilosc,desc(SlsU_R),desc(SlsU),ile_szt_all,WARTOŚC,desc(SUMA))%>% select(-ile_szt_all)
+  )
+})
+
+MMki1<- reactive({
+  posortowane_1_1A<-posortowane_1_1()
+  co_przesunac_od_nich<-co_przesunac_od_nich_zmienna()
+  sklep_odtowarowywany<-sklep_odtowarowywany_zmienna()
+  
+  if(is.null(co_przesunac_od_nich))
+    return(NULL)
+  
+  switch(input$opcja_towarowania,
+         "opcja1"= {posortowane_1_1A %>% group_by(KodProduktu,Rozmiar) %>% slice(1) %>%  select(1,2,3)->lista_biorcow
+           str_replace(lista_biorcow$Rozmiar, ",",".")->lista_biorcow$Rozmiar
+           left_join(co_przesunac_od_nich, lista_biorcow, by=c("KodProduktu","Rozmiar")) %>%  mutate(skad=sklep_odtowarowywany) %>%  select(KodProduktu,Rozmiar, ilosc,skad,dokad=Magazyn) 
+         },
+         
+         "opcja2"= {posortowane_1_1A %>% group_by(KodProduktu) %>% slice(1) %>%  select(1,2) ->lista_biorcow
+           left_join(co_przesunac_od_nich, lista_biorcow, by="KodProduktu") %>%  mutate(skad=sklep_odtowarowywany) %>%  select(KodProduktu,Rozmiar, ilosc,skad,dokad=Magazyn) 
+         }
+  )
+})
+
+
+MMki_scalone1<- eventReactive(input$update,{
+  posortowane_1_1A<-posortowane_1_1()
+  co_przesunac_od_nich<-co_przesunac_od_nich_zmienna()
+  nie_przesuwac_do_nich <- nie_przesuwac_do_nich_lista()
+  sklep_odtowarowywany<-sklep_odtowarowywany_zmienna()
+  hierarchia_1A<-hierarchia_1()
+  zestawienie_1A<-zestawienie_1()
+  gdzie_nie_jeansy<-sklepy_bez_jeansow()
+  SLS_SUMA_1A<-SLS_SUMA()
+  MMki_1A<-MMki1()
+  gdzie_tylko_przesuwamy_1A<-gdzie_tylko_przesuwamy()
+  
+  
+  if(sum(is.na(MMki_1A)) >0){
+    switch(input$opcja_towarowania,
+           "opcja1"= {posortowane_1_1A %>% group_by(KodProduktu,Rozmiar) %>% slice(1) %>%  select(1,2,3)->lista_biorcow
+             left_join(co_przesunac_od_nich, lista_biorcow, by=c("KodProduktu","Rozmiar")) %>%  mutate(skad=sklep_odtowarowywany) %>%  select(KodProduktu,Rozmiar, ilosc,skad,dokad=Magazyn)%>% filter(is.na(dokad)) ->indeksy_na
+           },
+           "opcja2"= {posortowane_1_1A %>% group_by(KodProduktu) %>% slice(1) %>%  select(1,2) ->lista_biorcow
+             left_join(co_przesunac_od_nich, lista_biorcow, by="KodProduktu") %>%  mutate(skad=sklep_odtowarowywany) %>%  select(KodProduktu,Rozmiar, ilosc,skad,dokad=Magazyn)%>% filter(is.na(dokad)) ->indeksy_na        
+           })
+    #daje im kategoryzacje
+    indeksy_na %>% left_join(hierarchia_1A, by=c("KodProduktu")) %>% filter(DEPARTAMENT!="ARTYKUŁY DLA SKLEPÓW")->indeksy_do_rozdysponowania
+    
+    #wskazuje najbardziej niedotowarowany sklep w danej kategorii i departamencie
+    ##uwzgledniajac, ze nie kazdy sklep moze miec kazdy towar, np junior czy jeansy. Dla uproszczenia wyklucze wszystkie, bez rozrozniania
+    
+    switch(input$opcja_dotowarowania,
+           "opcjaA"= {zestawienie_1A %>%  select(Magazyn,KATEGORIA,DEPARTAMENT,GRUPA, WARTOŚC) %>%  arrange(WARTOŚC, KATEGORIA, DEPARTAMENT, GRUPA) %>%  unique() %>% 
+               filter(!Magazyn %in% c(sklep_odtowarowywany,nie_przesuwac_do_nich,gdzie_nie_jeansy) & Magazyn %in% gdzie_tylko_przesuwamy_1A) %>%
+               group_by(KATEGORIA, DEPARTAMENT, GRUPA) %>% slice(1)->dodatkowi_dawcy 
+           },
+           "opcjaB"= {zestawienie_1A %>% left_join(SLS_SUMA_1A, by=c("Magazyn","KATEGORIA","DEPARTAMENT")) %>% select(Magazyn,KATEGORIA,DEPARTAMENT,GRUPA, SUMA) %>%  
+               arrange(desc(SUMA), KATEGORIA, DEPARTAMENT, GRUPA) %>%  unique() %>%  filter(!Magazyn %in% c(sklep_odtowarowywany,nie_przesuwac_do_nich,gdzie_nie_jeansy) & Magazyn %in% gdzie_tylko_przesuwamy_1A) %>%
+               group_by(KATEGORIA, DEPARTAMENT, GRUPA) %>% slice(1)->dodatkowi_dawcy })
+    left_join(indeksy_do_rozdysponowania, dodatkowi_dawcy, by=c("KATEGORIA","DEPARTAMENT","GRUPA")) %>% select(1,2,3,4,dokad=Magazyn) ->MMki_1
+    MMki_1 %>% rbind(na.omit(MMki_1A))
+    
+  }else{
+    MMki_1A 
+    
+  }
+  
+})
+# podsumowanie alternatywne
+
+output$podsumowanie_1 <-renderTable({
+  MMki_scalone_1A<-MMki_scalone1()
+  MMki_scalone_1A %>% group_by(dokad) %>%  summarise(ilosc_szt=as.integer(sum(ilosc))) %>% arrange(desc(ilosc_szt)) %>%  mutate("lp"=row_number()) %>%  select(3,1,2)})
+
+
+
+## Tworzenie pliku do pobrania
+output$upload <- downloadHandler(filename = "lista_MMek.csv", content = function(file) {
+write.csv(MMki_scalone1(), file, row.names = TRUE)})
+
+
+})
+
 

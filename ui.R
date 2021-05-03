@@ -14,6 +14,7 @@ shinyUI(fluidPage(
         sidebarPanel(
               fileInput("co_przesunac_od_nich","wgraj plik z lista do przesuniecia", accept = ".xlsx"),
               actionButton("update","odswiez"),
+              numericInput("ilosc_MMek","do ilu sklepow chcesz wysylac", min=1, max=length(lista_sklepow), value=length(lista_sklepow),step=1),
               checkboxGroupInput("nie_przesuwac_do_nich", "wskaz wykluczone sklepy:",
                        choiceNames = lista_sklepow,
                          choiceValues =lista_sklepow),
@@ -34,7 +35,9 @@ shinyUI(fluidPage(
               downloadButton("upload","pobierz plik")
                     
               ,width = 4),
-  mainPanel(tableOutput("podsumowanie_2"),
-             ))))
+  mainPanel(tabsetPanel(type="tabs",
+                tabPanel("Pelna lista", tableOutput("podsumowanie")),
+                tabPanel("Lista ograniczona", tableOutput("podsumowanie_1"))
+             )))))
 
 
