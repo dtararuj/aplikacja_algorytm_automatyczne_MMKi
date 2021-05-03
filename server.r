@@ -1,10 +1,4 @@
-library(shiny)
-library(tidyr)
-library(tidyverse)
-library(readxl)
-library(writexl)
-
-
+###otwieraj zawsze with encoding utf - 8 
 
 
 
@@ -22,7 +16,7 @@ co_przesunac_od_nich_zmienna<-reactive({
   inFile <- input$co_przesunac_od_nich
   if(is.null(inFile))
     return(NULL)
-  read.csv(inFile$datapath,sep=";") 
+  read_xlsx(inFile$datapath) 
 })
   
 nazwa_folderu <- reactive({input$folder})
@@ -283,7 +277,7 @@ MMki_scalone<- eventReactive(input$update,{
              left_join(co_przesunac_od_nich, lista_biorcow, by="KodProduktu") %>%  mutate(skad=sklep_odtowarowywany) %>%  select(KodProduktu,Rozmiar, ilosc,skad,dokad=Magazyn)%>% filter(is.na(dokad)) ->indeksy_na        
            })
     #daje im kategoryzacje
-    indeksy_na %>% left_join(hierarchia_1A, by=c("KodProduktu")) ->indeksy_do_rozdysponowania
+    indeksy_na %>% left_join(hierarchia_1A, by=c("KodProduktu")) %>% filter(DEPARTAMENT!="ARTYKUŁY DLA SKLEPÓW")->indeksy_do_rozdysponowania
     
     #wskazuje najbardziej niedotowarowany sklep w danej kategorii i departamencie
     ##uwzgledniajac, ze nie kazdy sklep moze miec kazdy towar, np junior czy jeansy. Dla uproszczenia wyklucze wszystkie, bez rozrozniania
@@ -296,16 +290,29 @@ MMki_scalone<- eventReactive(input$update,{
            "opcjaB"= {zestawienie_1A %>% left_join(SLS_SUMA_1A, by=c("Magazyn","KATEGORIA","DEPARTAMENT")) %>% select(Magazyn,KATEGORIA,DEPARTAMENT,GRUPA, SUMA) %>%  
                arrange(desc(SUMA), KATEGORIA, DEPARTAMENT, GRUPA) %>%  unique() %>%  filter(!Magazyn %in% c(sklep_odtowarowywany,nie_przesuwac_do_nich,gdzie_nie_jeansy)) %>%
                group_by(KATEGORIA, DEPARTAMENT, GRUPA) %>% slice(1)->dodatkowi_dawcy })
-    left_join(indeksy_do_rozdysponowania, dodatkowi_dawcy, by=c("KATEGORIA","DEPARTAMENT","GRUPA")) %>% select(1,2,3,4,dokad=Magazyn)->MMki_1
+    left_join(indeksy_do_rozdysponowania, dodatkowi_dawcy, by=c("KATEGORIA","DEPARTAMENT","GRUPA")) %>% select(1,2,3,4,dokad=Magazyn) ->MMki_1
     MMki_1 %>% rbind(na.omit(MMki_1A))
-    
+   
   }else{
     MMki_1A 
+    
   }
+
+})
+  #output$podsumowanie_2 <-renderTable({
+   # MMki_scalone_1A<-MMki_scalone()
+    #MMki_scalone_1A %>%  tail()})
+  
+output$upload <- downloadHandler(filename = "lista_MMek.csv", content = function(file) {
+  write.csv(MMki_scalone(), file, row.names = TRUE)})
+
+
+#7a podsumowanie
+
+
+output$podsumowanie_2 <-renderTable({
+    MMki_scalone_1A<-MMki_scalone()
+    MMki_scalone_1A %>% group_by(dokad) %>%  summarise(ilosc_szt=as.integer(sum(ilosc))) %>% arrange(desc(ilosc_szt)) %>%  mutate("lp"=row_number()) %>%  select(3,1,2)})
   
 })
 
-output$podsumowanie_2 <-renderTable({
-  MMki_scalone_1A<-MMki_scalone()
-  MMki_scalone_1A %>%  head()})
-})

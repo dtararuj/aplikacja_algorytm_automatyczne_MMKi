@@ -12,6 +12,8 @@ shinyUI(fluidPage(
   titlePanel("automatyczne mmki ze sklepu"),
     sidebarLayout(
         sidebarPanel(
+              fileInput("co_przesunac_od_nich","wgraj plik z lista do przesuniecia", accept = ".xlsx"),
+              actionButton("update","odswiez"),
               checkboxGroupInput("nie_przesuwac_do_nich", "wskaz wykluczone sklepy:",
                        choiceNames = lista_sklepow,
                          choiceValues =lista_sklepow),
@@ -19,7 +21,6 @@ shinyUI(fluidPage(
               checkboxGroupInput("bez_jeansow", "wskaz sklepy bez jeansow",
                                  choiceNames = lista_sklepow,
                                  choiceValues =lista_sklepow),
-              fileInput("co_przesunac_od_nich","wgraj plik z lista do przesuniecia", accept = ".csv"),
               textInput("folder","sciezka do folderu z danymi",value="Z:/PRODUKT/NOWE SKLEPY/algorytm zwrotów pod zatowarowanie"),
               selectInput(inputId = "sposob_sortowania","sposob sortowania",choices=c("po ilosci z indekso rozmiaru rosnaco"="a",
                                                                                       "po sprzedazy na indeksie malejaco"="b",
@@ -30,10 +31,10 @@ shinyUI(fluidPage(
               selectInput(inputId = "opcja_dotowarowania","czy sie kierowac dla sklepow, ktore nie maja tego indeksu",
                                                                             choices=c("po zatowarowaniu"="opcjaA",
                                                                                       "po sprzedazy"="opcjaB"), ""),
-              actionButton("update","odswiez")
+              downloadButton("upload","pobierz plik")
                     
-  ),
-  mainPanel(tableOutput("podsumowanie_2")
-))))
+              ,width = 4),
+  mainPanel(tableOutput("podsumowanie_2"),
+             ))))
 
 
