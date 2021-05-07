@@ -12,16 +12,16 @@ library(writexl)
 
 nie_przesuwac_do_nich<-c("S90","S89")
 sklep_odtowarowywany= "SKLEP W£ADYS£AWOWO"
-folder<-"Z:/PRODUKT/NOWE SKLEPY/algorytm zwrotów pod zatowarowanie"
+folder<-"Z:/PRODUKT/NOWE SKLEPY/algorytm zwrotów pod zatowarowanie"    #gdzie sa dane
 
 gdzie_nie_junior<-c("SKLEP RACIBÓRZ")
 gdzie_nie_jeansy<-c("SKLEP KUTNO", "SKLEP G£OWNO", "STRZELCE OPOLSKIE")
 
-
+folder_skryptow<- "Z:/PRODUKT/NOWE SKLEPY/algorytm zwrotów pod zatowarowanie/skrypty"   #folder gdzie sa skrypty
 #2. PUNKT wyjcia to dane wyjsciowe ze skryptu sklep przenoszony, a dokladniej plik:
 co_przesunac_od_nich<-read_xlsx(file.path(file.path(folder, "zrzuty"),"co_przesunac.xlsx"))
 
-
+################################################################################
 #mamy wiec towar, ktory chcemy od nich zabrac. W kolejnym kroku trzeba wskazac dokad najlepiej je przesunac.
 
 #indeksy te przesunmy do sklepow posortowanych w takiej kolejnosci:
@@ -96,7 +96,6 @@ hierarchia_1<- hierarchia %>% select(KodProduktu=2,KATEGORIA=4,11,12)
 hierarchia_1$GRUPA <- hierarchia_1$GRUPA %>% toupper()
 
 # 4 laczymy dane
-
 # a) najpierw hierarchia z remanentem
 remanenty_1 %>%  left_join(hierarchia_1, by=c("KodProduktu"))->baza1_1
 
@@ -163,7 +162,7 @@ posortowane_1 %>%  filter(!Magazyn %in% c(sklep_odtowarowywany,nie_przesuwac_do_
 #????pytanie czy chce dorzucac do sklepow ilosci do wskazanej granicy ze slownika, czy szybka akcja i mniej MMek, wiec cala ilosc do najlepszego sklepu?
 #jezeli tak to tabele posortowane_1 ograniczam tylko do pierwszego wystapienia indekso rozmiaru, tym samym mam odfiltrowane tylko po 1 sklepie z indeko rozmiaru [nie wdrozone na razie, to tylko pomysl]
 
-####################################################### nalezy wybrac rozne opcje
+################################################################################ nalezy wybrac rozne opcje
 
 # [opcja 1] rozwiazanie je¿eli chce wysylac kazdy rozmiar tam gdzie trzeba
 # [opcja 2] jezeli chcialbym sie skupic na wysylce calego indeksu do wytypowanego miasta.
@@ -171,7 +170,7 @@ posortowane_1 %>%  filter(!Magazyn %in% c(sklep_odtowarowywany,nie_przesuwac_do_
 #wybierz 1 lub 2
 opcja=1
 
-#######################################################
+################################################################################
 
 if(opcja==1){
   posortowane_11 %>% group_by(KodProduktu,Rozmiar) %>% slice(1) %>%  select(1,2,3)->lista_biorcow
@@ -211,7 +210,7 @@ indeksy_na %>% left_join(hierarchia_1, by=c("KodProduktu"))  %>%  filter(KATEGOR
   print("!!! brak na, przejdz dalej")
 }
 
-####################################################### nalezy wybrac rozne opcje 
+################################################################################ nalezy wybrac rozne opcje 
 
 #moge przesunac ten towar albo do najbardziej niedotowarowanego sklepu albo tego co najlepiej sprzedaje
 # 1= niedotowarowany
@@ -219,7 +218,7 @@ indeksy_na %>% left_join(hierarchia_1, by=c("KodProduktu"))  %>%  filter(KATEGOR
 ##uwzgledniajac, ze nie kazdy sklep moze miec kazdy towar, np junior czy jeansy. Dla uproszczenia wyklucze wszystkie, bez rozrozniania  
 
 opcja_1=1
-#######################################################
+################################################################################
 
 if(opcja_1==1){
   zestawienie1_1 %>%  select(Magazyn,KATEGORIA,DEPARTAMENT,GRUPA, WARTOŒC) %>%  arrange(WARTOŒC, KATEGORIA, DEPARTAMENT, GRUPA) %>%  unique() %>% 
@@ -253,16 +252,27 @@ if(opcja_1==1){
 MMki_scalone %>%  group_by(dokad) %>%  summarise(ilosc_szt=sum(ilosc)) %>% arrange(desc(ilosc_szt)) ->podsumowanie_bez_NA
  View(podsumowanie_bez_NA)
 
+################################################################################
+#7b jezeli chce ograniczyc ilosc sklepow, ktore dostaja MMek
+ 
+ #wybierz albo: "sklepy" - to znaczy, ze  bierzemy jako ograniczenie parametr ile sklepow lub "szt" - to znaczy ze minimum tyle szt. moze byc na MMce
+ 
+ opcja<-"szt"  #lub "sklepy"
+ 
+ ile_sklepow= 30
+ ile_min = 10
+ 
+################################################################################
+ if(opcja=="sklepy"){
+   lista_sklepow_ograniczona<-tail(podsumowanie_bez_NA$dokad,ile_sklepow) 
+ }else{
+   lista_sklepow_ograniczona<-podsumowanie_bez_NA %>%  filter(ilosc_szt>=ile_min) %>% select(1) %>% pull() 
+ }
 
-#7b chce ograniczyc ilosc sklepow, ktore dostaja MMek
-
-do_ilu_sklepow<-25
-
-podsumowanie_bez_NA[1:(do_ilu_sklepow),1] %>% pull ->lista_do_ktorych_ostatecznie_przesune
 
 setwd(file.path(folder, "skrypty"))
 
-source("skrypt_ograniczajacy.R", encoding = "UTF-8")
+source("skrypt_ograniczajacy_ilosc_sklepow_do_MMek.R", encoding = "UTF-8")
 
 #8 ostateczne podsumowanie
 
