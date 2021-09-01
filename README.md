@@ -30,8 +30,9 @@ Jako rezultat działania skryptu otrzymujemy listę, w formacie csv, którą mo�
 ## Korzyści
 ---
 
-Wykorzystując skrypt udało się zaoszczędzić 6 roboczogodzin.
-Dodatkowo wybór odbiorców wskazanych ruchów towarowych nie jest przypadkowa, udało się również wykluczyć błąd ludzki polegający na wytypowaniu zbyt dużej ilości sklepów, co zawsze wiążę się z dodatkowymi kosztami przesyłek.
+Wykorzystując skrypt udało się zaoszczędzić 6 roboczogodzin raz na 2 tygodnie, plus ten skrypt był inicjatorem kolejnych rozwiązań w obszarze zarządzania towarem.  
+Dodatkowo wybór odbiorców wskazanych ruchów towarowych nie jest przypadkowa tylko uzasadniona danymi statystycznymi. 
+Oprócz tego udało się również wykluczyć błąd ludzki polegający na wytypowaniu zbyt dużej ilości sklepów, co zawsze wiazało się z dodatkowymi kosztami przesyłek (skrypt koncentruje ruchy towarowe i dąży do utworzenia jak najmniejszej liczby przesyłek).
 
 ## Szczegółowy opis funkcjonalności
 ---
